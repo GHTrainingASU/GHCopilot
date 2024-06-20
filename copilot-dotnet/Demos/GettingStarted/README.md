@@ -2,6 +2,8 @@
 
 Welcome to GitHub Copilot! In this example, we'll show you how to use Copilot to write a simple .NET application.
 
+NEW FILES
+
 ## Prerequisites
 
 Make sure that you meet the following requirements.

@@ -1,0 +1,60 @@
+# ------------------------------------------------------------------------------------------------------------------------
+# Pipeline that uses the Playwright Service in Azure to run Playwright tests and publishes results
+# ------------------------------------------------------------------------------------------------------------------------
+name: $(date:yyyy).$(date:MM).$(date:dd)$(rev:.r)
+pool:
+  vmImage: ubuntu-latest
+
+trigger: 
+  - none
+
+variables:
+- group: PlaywrightServiceSecrets
+
+steps:   
+- task: NodeTool@0
+  displayName: 'Install Node.js'
+  inputs:
+    versionSpec: '18'
+
+- task: Npm@1
+  displayName: 'npm clean install'
+  inputs:
+    command: 'ci'
+    verbose: false
+
+- script: npm install dotenv
+  displayName: 'Install DotEnv'
+
+- script: npx playwright install --with-deps
+  displayName: 'Install Playwright Browsers'
+
+- script: npx playwright test 'tests' -c playwright.config.service.ts
+  displayName: 'Run all Playwright tests'
+  env:
+    CI: 'true'
+    PLAYWRIGHT_SERVICE_ACCESS_TOKEN: $(PLAYWRIGHT_SERVICE_ACCESS_TOKEN)
+    PLAYWRIGHT_SERVICE_URL: $(PLAYWRIGHT_SERVICE_URL)
+
+- task: CmdLine@2
+  displayName: 'Display Directory Tree'
+  inputs:
+    script: |
+      tree $(System.DefaultWorkingDirectory)
+  condition: succeededOrFailed()
+
+- task: PublishTestResults@2
+  displayName: 'Report Test Results'
+  inputs:
+    testRunTitle: 'Playwright UI Tests'
+    testResultsFormat: 'JUnit'
+    testResultsFiles: $(System.DefaultWorkingDirectory)/test-results/*.xml
+  condition: succeededOrFailed()
+
+- task: PublishPipelineArtifact@1
+  displayName: 'Publish Testing Report as Artifact'
+  inputs:
+    targetPath: playwright-report
+    artifact: playwright-report
+    publishLocation: 'pipeline'
+  condition: succeededOrFailed()
